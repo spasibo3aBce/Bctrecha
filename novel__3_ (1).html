@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ragdoll: История Глеба и Камилы</title>
+<style>
+  :root{
+    --bg1:#1b1035;
+    --bg2:#341b5c;
+    --accent-boy:#4fa3ff;
+    --accent-girl:#ff6fb0;
+    --accent-narr:#c9c2e0;
+    --panel:#150b28ee;
+    --panel-border:#7a5ad1;
+    --text:#f3f0ff;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    color:var(--text);
+    overflow:hidden;
+  }
+  #stage{
+    position:relative;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-end;
+    align-items:center;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  #bgLayer{
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(79,163,255,0.18), transparent 45%),
+      radial-gradient(circle at 80% 30%, rgba(255,111,176,0.18), transparent 45%),
+      radial-gradient(circle at 50% 90%, rgba(255,255,255,0.05), transparent 60%);
+    transition:background 1s ease;
+  }
+  #stars{
+    position:absolute;inset:0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 20%, #fff8, transparent),
+      radial-gradient(1.5px 1.5px at 80% 10%, #fff6, transparent),
+      radial-gradient(1px 1px at 60% 70%, #fff5, transparent),
+      radial-gradient(1.5px 1.5px at 30% 80%, #fff7, transparent),
+      radial-gradient(1px 1px at 90% 60%, #fff4, transparent),
+      radial-gradient(1.5px 1.5px at 45% 40%, #fff6, transparent);
+    opacity:0.7;
+    animation:starsTwinkle 6s ease-in-out infinite alternate;
+  }
+  @keyframes starsTwinkle{ from{opacity:.45;filter:brightness(1);} to{opacity:.85;filter:brightness(1.25);} }
+  #bokeh{
+    position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0;
+  }
+  #bokeh span{
+    position:absolute; bottom:-10%; border-radius:50%;
+    background:radial-gradient(circle, currentColor 0%, transparent 72%);
+    opacity:.28; filter:blur(1px);
+    animation-name:bokehFloat; animation-timing-function:ease-in-out; animation-iteration-count:infinite;
+  }
+  @keyframes bokehFloat{
+    0%{ transform:translateY(0) translateX(0) scale(1); opacity:0; }
+    10%{ opacity:.3; }
+    50%{ transform:translateY(-55vh) translateX(12px) scale(1.15); }
+    90%{ opacity:.22; }
+    100%{ transform:translateY(-105vh) translateX(-10px) scale(1.3); opacity:0; }
+  }
+  #sprites{
+    position:absolute;
+    bottom:min(30vh, 260px);
+    left:0;right:0;
+    display:flex;
+    justify-content:center;
+    gap:min(18vw,220px);
+    pointer-events:none;
+    transition:all .4s ease;
+  }
+  .sprite{
+    width:min(30vw,160px);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    transition:transform .35s ease, opacity .35s ease, filter .35s ease;
+    opacity:0.35;
+    transform:scale(0.92) translateY(10px);
+    position:relative;
+  }
+  .sprite svg{ width:100%; height:auto; display:block; overflow:visible; }
+  .sprite::after{
+    content:'';
+    position:absolute;
+    bottom:-6px;
+    left:50%;
+    transform:translateX(-50%);
+    width:55%;
+    height:12px;
+    border-radius:50%;
+    background:rgba(0,0,0,0.35);
+    filter:blur(4px);
+  }
+  #spriteBoy{ color:var(--accent-boy); }
+  #spriteGirl{ color:var(--accent-girl); }
+  .sprite.active{
+    opacity:1;
+    transform:scale(1.05) translateY(0);
+    filter:drop-shadow(0 0 16px currentColor);
+  }
+  .sprite.bounce{
+    animation:bounce .5s ease;
+  }
+  @keyframes bounce{
+    0%{transform:scale(1.05) translateY(0);}
+    30%{transform:scale(1.15) translateY(-14px) rotate(-4deg);}
+    60%{transform:scale(0.95) translateY(4px) rotate(3deg);}
+    100%{transform:scale(1.05) translateY(0);}
+  }
+  #titleScreen{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:22px;text-align:center;padding:24px;
+    background:linear-gradient(180deg, rgba(20,10,40,0.2), rgba(10,5,25,0.85));
+    z-index:20;
+  }
+  #titleScreen h1{
+    font-size:clamp(24px,6vw,44px);
+    margin:0;
+    background:linear-gradient(90deg,var(--accent-boy),var(--accent-girl));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    letter-spacing:1px;
+    animation:titleGlow 3.2s ease-in-out infinite alternate;
+  }
+  @keyframes titleGlow{
+    from{ filter:drop-shadow(0 0 6px #4fa3ff44); }
+    to{ filter:drop-shadow(0 0 20px #ff6fb088); }
+  }
+  #titleScreen p{
+    max-width:520px;
+    color:var(--accent-narr);
+    font-size:clamp(13px,3vw,16px);
+    line-height:1.5;
+  }
+  .bigbtn{
+    padding:14px 34px;
+    font-size:16px;
+    border-radius:30px;
+    border:2px solid var(--panel-border);
+    background:linear-gradient(90deg,#4fa3ff33,#ff6fb033);
+    color:var(--text);
+    cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease;
+    font-weight:600;
+  }
+  .bigbtn:hover{ transform:translateY(-2px); box-shadow:0 6px 18px -4px #ff6fb066; }
+  #ui{
+    position:relative;
+    width:100%;
+    max-width:900px;
+    padding:0 14px 18px;
+    z-index:10;
+  }
+  #progressWrap{
+    display:flex;align-items:center;gap:10px;
+    font-size:12px;color:var(--accent-narr);
+    margin-bottom:8px;
+    padding:0 4px;
+  }
+  #progressBar{
+    flex:1;height:5px;border-radius:4px;background:#ffffff22;overflow:hidden;
+  }
+  #progressFill{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--accent-boy),var(--accent-girl));
+    box-shadow:0 0 8px 1px #ff6fb066;
+    transition:width .35s ease;
+  }
+  #box{
+    background:var(--panel);
+    border:1.5px solid var(--panel-border);
+    border-radius:18px;
+    padding:16px 20px 46px;
+    min-height:130px;
+    position:relative;
+    backdrop-filter:blur(6px);
+    box-shadow:0 10px 30px -10px #000a;
+    cursor:pointer;
+    user-select:none;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  #box::before{
+    content:'';
+    position:absolute; inset:-1.5px; border-radius:18px; z-index:-1;
+    padding:1.5px;
+    background:linear-gradient(120deg,var(--accent-boy),var(--accent-girl),var(--accent-boy));
+    background-size:220% 220%;
+    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor;
+    mask-composite:exclude;
+    opacity:.55;
+    animation:borderFlow 7s linear infinite;
+    pointer-events:none;
+  }
+  @keyframes borderFlow{ to{ background-position:220% 0%; } }
+  #nameTag{
+    display:inline-block;
+    padding:4px 16px;
+    border-radius:20px;
+    font-weight:700;
+    font-size:14px;
+    margin-bottom:8px;
+    letter-spacing:.5px;
+  }
+  #nameTag.boy{ background:linear-gradient(90deg,#2a6fd0,#4fa3ff); }
+  #nameTag.girl{ background:linear-gradient(90deg,#d13d84,#ff6fb0); }
+  #nameTag.narr{ background:#544a7a; color:#e6e1ff; font-weight:600;}
+  #nameTag.hidden{ display:none; }
+  #textLine{
+    font-size:clamp(15px,2.6vw,19px);
+    line-height:1.55;
+    min-height:3.2em;
+    white-space:pre-wrap;
+  }
+  #textLine.narration{ font-style:italic; color:#e9e5ff; }
+  #hint{
+    position:absolute;
+    right:18px;
+    bottom:12px;
+    font-size:12px;
+    color:#ffffff88;
+    display:flex;align-items:center;gap:6px;
+  }
+  #hint .dot{
+    width:6px;height:6px;border-radius:50%;background:#ffffffaa;
+    animation:pulse 1.2s infinite ease-in-out;
+  }
+  @keyframes pulse{ 0%,100%{opacity:.3;} 50%{opacity:1;} }
+  #controls{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-top:8px;
+    font-size:12px;
+    color:#ffffff88;
+  }
+  #controls button{
+    background:transparent;
+    border:1px solid #ffffff33;
+    color:#ffffffcc;
+    border-radius:16px;
+    padding:6px 14px;
+    font-size:12px;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  #controls button:hover{ background:#ffffff15; }
+  #signOverlay{
+    position:absolute;
+    left:50%;top:38%;
+    transform:translate(-50%,-50%) rotate(-3deg) scale(0.6);
+    background:#f4e9c8;
+    color:#3b2b12;
+    padding:14px 22px;
+    border-radius:6px;
+    border:4px solid #a97c3f;
+    font-weight:700;
+    font-size:clamp(14px,3vw,20px);
+    box-shadow:0 10px 25px -6px #000a;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease, transform .3s ease;
+    max-width:70vw;
+    text-align:center;
+    z-index:15;
+  }
+  #signOverlay.show{
+    opacity:1;
+    transform:translate(-50%,-50%) rotate(-3deg) scale(1);
+  }
+  #endScreen{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;align-items:center;justify-content:center;
+    gap:18px;text-align:center;padding:24px;
+    background:linear-gradient(180deg, rgba(20,10,40,0.3), rgba(10,5,25,0.9));
+    z-index:25;
+  }
+  #endScreen h2{
+    font-size:clamp(22px,5vw,34px);
+    background:linear-gradient(90deg,var(--accent-boy),var(--accent-girl));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    margin:0;
+  }
+  #endScreen p{ color:var(--accent-narr); max-width:500px; line-height:1.6; }
+  /* ===== Mini-games ===== */
+  #minigameOverlay{
+    position:absolute; inset:0; z-index:18; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    padding:18px; gap:14px;
+    background:linear-gradient(180deg, rgba(18,9,36,0.75), rgba(9,4,22,0.94));
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+  }
+  #minigameOverlay.show{ display:flex; }
+  #mgHeader{ display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+  #mgTitle{
+    margin:0; font-size:clamp(15px,4vw,21px);
+    background:linear-gradient(90deg,var(--accent-boy),var(--accent-girl));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #mgSkip{
+    background:transparent; border:1px solid #ffffff33; color:#ffffffaa;
+    border-radius:14px; padding:4px 12px; font-size:11px; cursor:pointer;
+  }
+  #mgSkip:hover{ background:#ffffff15; }
+  #mgArea{
+    position:relative; width:min(560px,92vw); height:min(360px,48vh);
+    border-radius:18px; overflow:hidden; touch-action:none;
+    border:1.5px solid var(--panel-border); background:#0d0620;
+    box-shadow:0 12px 34px -10px #000c, inset 0 0 40px -10px #ffffff10;
+  }
+  #mgContinue{
+    display:none; padding:10px 28px; border-radius:24px;
+    border:2px solid var(--panel-border);
+    background:linear-gradient(90deg,#4fa3ff44,#ff6fb044);
+    color:#fff; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  #mgContinue:hover{ transform:translateY(-2px); }
+
+  .mg-bg-stars{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 15% 25%, rgba(79,163,255,0.25), transparent 40%),
+      radial-gradient(circle at 85% 20%, rgba(255,111,176,0.22), transparent 40%),
+      radial-gradient(1.5px 1.5px at 20% 70%, #fff9, transparent),
+      radial-gradient(1.5px 1.5px at 70% 40%, #fff7, transparent),
+      radial-gradient(1.5px 1.5px at 45% 85%, #fff8, transparent),
+      radial-gradient(1.5px 1.5px at 90% 65%, #fff6, transparent),
+      #140a2a;
+    animation:mgTwinkle 4s ease-in-out infinite alternate;
+  }
+  .mg-bg-stars-dense{
+    background:
+      radial-gradient(circle at 50% 15%, rgba(255,255,255,0.10), transparent 55%),
+      radial-gradient(1.4px 1.4px at 10% 30%, #fffb, transparent),
+      radial-gradient(1.4px 1.4px at 30% 80%, #fff9, transparent),
+      radial-gradient(1.4px 1.4px at 55% 20%, #fffa, transparent),
+      radial-gradient(1.4px 1.4px at 75% 65%, #fff8, transparent),
+      radial-gradient(1.4px 1.4px at 90% 35%, #fffb, transparent),
+      radial-gradient(1.4px 1.4px at 15% 60%, #fff7, transparent),
+      radial-gradient(1.4px 1.4px at 65% 85%, #fff8, transparent),
+      #0c0620;
+  }
+  @keyframes mgTwinkle{ from{filter:brightness(1);} to{filter:brightness(1.18);} }
+
+  /* intro panel shown before every mini-game starts, so pacing is up to the player */
+  .mg-intro{
+    position:absolute; inset:0; z-index:6; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px; text-align:center;
+    padding:26px; background:rgba(10,5,20,0.45);
+    animation:mgFadeIn .35s ease;
+  }
+  .mg-intro-icon{ font-size:44px; filter:drop-shadow(0 0 12px #ffffff55); }
+  .mg-intro-title{
+    font-size:clamp(16px,4.2vw,21px); font-weight:700;
+    background:linear-gradient(90deg,var(--accent-boy),var(--accent-girl));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .mg-intro-desc{ max-width:400px; font-size:13px; color:#f3f0ffcc; line-height:1.55; }
+  .mg-intro-start{
+    margin-top:6px; padding:9px 24px; border-radius:22px;
+    border:2px solid var(--panel-border);
+    background:linear-gradient(90deg,#4fa3ff44,#ff6fb044);
+    color:#fff; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  .mg-intro-start:hover{ transform:translateY(-2px); }
+  .mg-counter{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    font-size:13px; color:#f3f0ffcc; background:#00000055; padding:4px 14px;
+    border-radius:14px; z-index:3;
+  }
+  .mg-target{
+    position:absolute; font-size:min(11vw,46px); cursor:pointer;
+    transition:left .28s ease, top .28s ease, transform .12s ease;
+    filter:drop-shadow(0 0 10px #ffffff55);
+    z-index:2; user-select:none;
+  }
+  .mg-target.mg-pop{ transform:scale(1.4); }
+
+  .mg-catalog-bg{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,211,120,0.18), transparent 55%),
+      linear-gradient(180deg,#241436,#160b28);
+  }
+  .mg-catalog-sparkles{
+    position:absolute; inset:0; pointer-events:none;
+    background:
+      radial-gradient(1.5px 1.5px at 12% 20%, #ffd88066, transparent),
+      radial-gradient(1.5px 1.5px at 85% 15%, #ffd88055, transparent),
+      radial-gradient(1.5px 1.5px at 30% 85%, #ff9fc955, transparent),
+      radial-gradient(1.5px 1.5px at 70% 75%, #ffd88055, transparent);
+    animation:mgTwinkle 3.2s ease-in-out infinite alternate;
+  }
+  .mg-catalog-ref{
+    position:relative; z-index:2; text-align:center; padding-top:16px;
+    font-size:14px; color:#f3f0ffdd; display:flex; align-items:center;
+    justify-content:center; gap:8px; flex-wrap:wrap;
+  }
+  .mg-chip{
+    display:inline-block; width:14px; height:14px; border-radius:50%;
+    box-shadow:0 0 6px currentColor, inset 0 0 4px #ffffff55;
+    vertical-align:middle; margin-right:6px;
+  }
+  .mg-catalog-grid{
+    position:relative; z-index:2; display:grid; grid-template-columns:1fr 1fr;
+    gap:12px; padding:18px 22px;
+  }
+  .mg-swatch{
+    padding:16px 10px; border-radius:14px; border:1.5px solid #ffffff33;
+    background:#ffffff0f; color:#fff; font-size:14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    transition:transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .mg-swatch:hover{ background:#ffffff22; transform:translateY(-2px); }
+  .mg-swatch-correct{ border-color:#8effa8 !important; background:#8effa833 !important; }
+  .mg-swatch-wrong{ animation:mgShake .35s ease; border-color:#ff8484 !important; }
+  @keyframes mgShake{
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-6px);}
+    75%{transform:translateX(6px);}
+  }
+  .mg-catalog-hint{
+    position:relative; z-index:2; text-align:center; font-size:11px;
+    color:#ffffff88; padding-bottom:10px;
+  }
+
+  /* sign-writing mini-game */
+  .mg-sign-board{
+    position:absolute; top:34px; left:50%; transform:translateX(-50%);
+    font-size:40px; filter:drop-shadow(0 0 10px #ffffff44); z-index:2;
+  }
+  .mg-letters-grid{
+    position:absolute; left:0; right:0; bottom:16px; z-index:2;
+    display:flex; flex-wrap:wrap; justify-content:center; gap:10px;
+    padding:0 20px;
+  }
+  .mg-letter-tile{
+    width:44px; height:44px; border-radius:12px; border:1.5px solid #ffffff33;
+    background:#ffffff12; color:#fff; font-size:18px; font-weight:700; cursor:pointer;
+    animation:mgFloat 2.6s ease-in-out infinite;
+    transition:background .15s ease, border-color .15s ease, opacity .2s ease;
+  }
+  .mg-letter-tile:hover{ background:#ffffff28; }
+  .mg-letter-used{ opacity:0.25; animation:none; cursor:default; border-color:#8effa855 !important; }
+  @keyframes mgFloat{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
+
+  .mg-shawarma-bg{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 50% 100%, rgba(255,180,80,0.22), transparent 60%),
+      linear-gradient(180deg,#241536,#170c26);
+  }
+  .mg-steam{
+    position:absolute; inset:0; pointer-events:none;
+    background:
+      radial-gradient(10px 40px at 20% 90%, rgba(255,255,255,0.06), transparent 70%),
+      radial-gradient(10px 40px at 50% 95%, rgba(255,255,255,0.08), transparent 70%),
+      radial-gradient(10px 40px at 80% 90%, rgba(255,255,255,0.06), transparent 70%);
+    animation:mgSteamRise 4s ease-in-out infinite;
+  }
+  @keyframes mgSteamRise{
+    0%{ background-position:0 0, 0 0, 0 0; opacity:0.5; }
+    50%{ background-position:0 -18px, 0 -24px, 0 -16px; opacity:1; }
+    100%{ background-position:0 -36px, 0 -46px, 0 -32px; opacity:0.5; }
+  }
+  .mg-sh-score, .mg-sh-timer{
+    position:absolute; top:10px; z-index:3; font-size:13px;
+    color:#f3f0ffcc; background:#00000055; padding:4px 12px; border-radius:14px;
+  }
+  .mg-sh-score{ left:10px; }
+  .mg-sh-timer{ right:10px; }
+  .mg-sh-catcher{
+    position:absolute; bottom:6px; font-size:38px; transform:translateX(-50%);
+    z-index:3; filter:drop-shadow(0 4px 10px #000a); pointer-events:none;
+  }
+  .mg-sh-drop{
+    position:absolute; font-size:26px; z-index:2; pointer-events:none;
+    filter:drop-shadow(0 2px 6px #0008);
+  }
+
+  /* constellation mini-game */
+  .mg-const-svg{ position:relative; z-index:2; width:100%; height:100%; }
+  .mg-const-star{
+    fill:#ffffff33; stroke:#ffffffaa; stroke-width:1.5; cursor:pointer;
+    transition:fill .2s ease, stroke .2s ease, filter .2s ease;
+  }
+  .mg-const-star:hover{ fill:#ffffff66; }
+  .mg-const-done{
+    fill:#ffe9a8; stroke:#ffd166;
+    filter:drop-shadow(0 0 10px #ffd166cc);
+  }
+  .mg-const-wrong{ fill:#ff8484aa; }
+  .mg-const-line{
+    stroke:url(#mgConstGrad); stroke-width:2.2; stroke-linecap:round;
+    opacity:0.9; animation:mgFadeIn .4s ease;
+  }
+  .mg-const-label{
+    fill:#ffffffaa; font-size:12px; text-anchor:middle; font-family:inherit;
+  }
+  .mg-const-label-done{ fill:#ffd166; }
+
+  .mg-done{
+    position:absolute; inset:0; z-index:5; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,5,20,0.55);
+    animation:mgFadeIn .3s ease;
+  }
+  .mg-done-msg{
+    font-size:clamp(16px,4.4vw,22px); font-weight:700; text-align:center; padding:0 20px;
+    background:linear-gradient(90deg,var(--accent-boy),var(--accent-girl));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  @keyframes mgFadeIn{ from{opacity:0;} to{opacity:1;} }
+
+  /* ---- maze / obstacle-course mini-game ---- */
+  .mg-maze-bg{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(79,163,255,0.16), transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(255,111,176,0.16), transparent 50%),
+      linear-gradient(180deg,#1a0f30,#120a24);
+  }
+  .mg-maze-flag{
+    position:absolute; font-size:34px; z-index:2; filter:drop-shadow(0 0 10px #ffe9a8aa);
+    animation:mgFloat 2.2s ease-in-out infinite;
+  }
+  .mg-maze-avatar{
+    position:absolute; font-size:34px; z-index:3; transform:translate(-50%,-50%);
+    transition:left .05s linear, top .05s linear, filter .2s ease;
+    filter:drop-shadow(0 4px 8px #000a);
+  }
+  .mg-maze-avatar.mg-maze-bump{ filter:drop-shadow(0 0 10px #ff8484cc); }
+  .mg-maze-obstacle{
+    position:absolute; font-size:26px; z-index:2; transform:translate(-50%,-50%);
+    filter:drop-shadow(0 2px 6px #0008);
+  }
+  .mg-maze-hint{
+    position:absolute; top:8px; left:50%; transform:translateX(-50%); z-index:3;
+    font-size:12px; color:#f3f0ffcc; background:#00000055; padding:4px 14px; border-radius:14px;
+  }
+
+  /* ---- memory match mini-game ---- */
+  .mg-mem-bg{ position:absolute; inset:0; background:linear-gradient(180deg,#211339,#150a26); }
+  .mg-mem-grid{
+    position:relative; z-index:2; display:grid; grid-template-columns:repeat(4,1fr);
+    gap:9px; padding:16px; height:100%; align-content:center;
+  }
+  .mg-mem-card{
+    aspect-ratio:1/1; border-radius:12px; border:1.5px solid #ffffff33;
+    background:#ffffff14; display:flex; align-items:center; justify-content:center;
+    font-size:min(7vw,26px); cursor:pointer; user-select:none;
+    transition:transform .2s ease, background .2s ease, border-color .2s ease;
+  }
+  .mg-mem-card:hover{ background:#ffffff28; }
+  .mg-mem-card.mg-mem-flipped{ background:#ffffff28; border-color:#ffd166aa; transform:scale(1.04); }
+  .mg-mem-card.mg-mem-matched{ background:#8effa833; border-color:#8effa8aa; opacity:.85; cursor:default; }
+
+  /* ---- reaction mini-game (reuses .mg-target) ---- */
+  .mg-reaction-bg{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 50% 40%, rgba(255,255,255,0.06), transparent 60%),
+      linear-gradient(180deg,#1c1034,#100822);
+  }
+
+  /* ---- quiz mini-game ---- */
+  .mg-quiz-bg{ position:absolute; inset:0; background:linear-gradient(180deg,#241736,#160c28); }
+  .mg-quiz-wrap{
+    position:relative; z-index:2; height:100%; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:16px; padding:20px; text-align:center;
+  }
+  .mg-quiz-q{ font-size:clamp(14px,3.6vw,17px); font-weight:600; max-width:420px; line-height:1.5; }
+  .mg-quiz-opts{ display:flex; flex-direction:column; gap:10px; width:min(340px,84vw); }
+  .mg-quiz-opt{
+    padding:10px 16px; border-radius:16px; border:1.5px solid #ffffff33;
+    background:#ffffff10; color:#fff; font-size:13.5px; cursor:pointer;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .mg-quiz-opt:hover{ background:#ffffff26; transform:translateY(-1px); }
+  .mg-quiz-progress{ font-size:11px; color:#ffffff88; }
+
+  /* ---- heart-catch mini-game (reuses .mg-sh-* classes) ---- */
+  .mg-hearts-bg{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 50% 100%, rgba(255,111,176,0.25), transparent 60%),
+      linear-gradient(180deg,#2a1030,#180a24);
+  }
+
+  /* ---- rhythm mini-game ---- */
+  .mg-rhythm-bg{
+    position:absolute; inset:0;
+    background:radial-gradient(circle at 50% 45%, rgba(255,209,102,0.14), transparent 60%), linear-gradient(180deg,#1d1230,#120a22);
+  }
+  .mg-rhythm-wrap{
+    position:relative; z-index:2; height:100%; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px;
+  }
+  .mg-rhythm-drum{
+    width:min(30vw,110px); height:min(30vw,110px); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:min(12vw,46px);
+    background:radial-gradient(circle at 35% 30%, #ffffff22, transparent 70%), linear-gradient(145deg,#4fa3ff55,#ff6fb055);
+    border:2px solid var(--panel-border); cursor:pointer; user-select:none;
+    animation:mgDrumPulse 1.3s ease-in-out infinite;
+    transition:transform .08s ease;
+  }
+  .mg-rhythm-drum:active{ transform:scale(0.9); }
+  .mg-rhythm-drum.mg-rhythm-hit{ animation:none; transform:scale(1.18); }
+  @keyframes mgDrumPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.06); } }
+  .mg-rhythm-counter{ font-size:14px; color:#f3f0ffdd; }
+  .mg-rhythm-bar{ width:min(240px,70vw); height:8px; border-radius:6px; background:#ffffff22; overflow:hidden; }
+  .mg-rhythm-bar-fill{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent-boy),var(--accent-girl)); transition:width .25s ease; }
+
+  #audioControls{
+    position:absolute;
+    top:calc(14px + env(safe-area-inset-top,0px));
+    right:14px;
+    z-index:30;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:#00000055;
+    border:1px solid #ffffff33;
+    border-radius:24px;
+    padding:6px 10px 6px 6px;
+    backdrop-filter:blur(4px);
+  }
+  #muteBtn{
+    background:transparent;
+    border:none;
+    color:#fff;
+    border-radius:50%;
+    width:28px;height:28px;
+    font-size:15px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  #volumeSlider{
+    -webkit-appearance:none;
+    appearance:none;
+    width:64px;height:4px;
+    border-radius:4px;
+    background:linear-gradient(90deg,var(--accent-boy),var(--accent-girl));
+    outline:none;
+    cursor:pointer;
+  }
+  #volumeSlider::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:13px;height:13px;border-radius:50%;
+    background:#fff;
+    box-shadow:0 0 4px #000a;
+    cursor:pointer;
+  }
+  #volumeSlider::-moz-range-thumb{
+    width:13px;height:13px;border-radius:50%;
+    background:#fff;border:none;
+    box-shadow:0 0 4px #000a;
+    cursor:pointer;
+  }
+  @media (max-width:380px){
+    #volumeSlider{ width:44px; }
+  }
+  @media (max-width:480px){
+    #sprites{ gap:14vw; bottom:24vh; }
+    #box{ padding:14px 16px 40px; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bgLayer"></div>
+  <div id="stars"></div>
+  <div id="bokeh"></div>
+
+  <div id="audioControls">
+    <button id="muteBtn" title="Звук">🔊</button>
+    <input type="range" id="volumeSlider" min="0" max="100" value="50" title="Громкость">
+  </div>
+
+  <div id="sprites">
+    <div class="sprite" id="spriteBoy">
+      <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+        <!-- straight-shouldered t-shirt body, not a rounded dress silhouette -->
+        <path d="M10,140 L10,106 Q10,96 22,95 L44,94 Q60,107 76,94 L98,95 Q110,96 110,106 L110,140 Z" fill="#4fa3ff"/>
+        <rect x="49" y="76" width="22" height="20" fill="#f2c397"/>
+        <circle cx="60" cy="60" r="38" fill="#f7d2ab"/>
+        <!-- longer, fuller shaggy hair covering the ears and reaching past the jaw -->
+        <path d="M14,58 Q6,8 60,6 Q114,8 106,58 Q112,86 98,104 Q95,80 96,62 Q99,30 60,26 Q21,30 24,62 Q25,80 22,104 Q8,86 14,58 Z" fill="#5f3b20"/>
+        <!-- thick, jagged spiky fringe on top -->
+        <path d="M20,46 L27,17 L36,38 L45,13 L53,36 L60,15 L67,36 L75,13 L84,38 L93,17 L100,46 Q82,25 60,27 Q38,25 20,46 Z" fill="#71491f"/>
+        <!-- shaggy side locks framing the face -->
+        <path d="M20,52 Q13,72 19,96 Q23,76 27,60 Z" fill="#5f3b20"/>
+        <path d="M100,52 Q107,72 101,96 Q97,76 93,60 Z" fill="#5f3b20"/>
+        <circle cx="46" cy="63" r="4.2" fill="#2b2b2b"/>
+        <circle cx="74" cy="63" r="4.2" fill="#2b2b2b"/>
+        <circle cx="47.3" cy="61.5" r="1.2" fill="#fff"/>
+        <circle cx="75.3" cy="61.5" r="1.2" fill="#fff"/>
+        <path d="M50,78 Q60,82 70,78" stroke="#8a5a3a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+        <circle cx="39" cy="71" r="5" fill="#ff9fc9" opacity="0.22"/>
+        <circle cx="81" cy="71" r="5" fill="#ff9fc9" opacity="0.22"/>
+      </svg>
+    </div>
+    <div class="sprite" id="spriteGirl">
+      <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15,140 Q15,95 60,95 Q105,95 105,140 Z" fill="#ff6fb0"/>
+        <rect x="49" y="76" width="22" height="20" fill="#f7d2ab"/>
+        <path d="M17,48 Q12,8 60,8 Q108,8 103,48 Q110,88 93,122 Q99,68 90,53 Q86,32 60,28 Q34,32 30,53 Q21,68 27,122 Q10,88 17,48 Z" fill="#6b4226"/>
+        <circle cx="60" cy="58" r="36" fill="#f7d2ab"/>
+        <path d="M25,47 Q30,23 60,23 Q90,23 95,47 Q78,31 60,33 Q42,31 25,47 Z" fill="#7c522c"/>
+        <circle cx="47" cy="61" r="4.2" fill="#2b2b2b"/>
+        <circle cx="73" cy="61" r="4.2" fill="#2b2b2b"/>
+        <circle cx="48.3" cy="59.5" r="1.2" fill="#fff"/>
+        <circle cx="74.3" cy="59.5" r="1.2" fill="#fff"/>
+        <path d="M50,75 Q60,81 70,75" stroke="#8a5a3a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        <circle cx="40" cy="69" r="5.5" fill="#ff9fc9" opacity="0.5"/>
+        <circle cx="80" cy="69" r="5.5" fill="#ff9fc9" opacity="0.5"/>
+        <path d="M55,15 l-9,-7 l1,13 z M65,15 l9,-7 l-1,13 z" fill="#ff3d85"/>
+        <circle cx="60" cy="15" r="3.4" fill="#d1236a"/>
+      </svg>
+    </div>
+  </div>
+
+  <div id="signOverlay"></div>
+
+  <div id="minigameOverlay">
+    <div id="mgHeader">
+      <h3 id="mgTitle"></h3>
+      <button id="mgSkip">Пропустить мини-игру →</button>
+    </div>
+    <div id="mgArea"></div>
+    <button id="mgContinue">Продолжить ▶</button>
+  </div>
+
+  <div id="titleScreen">
+    <h1>Ragdoll: История Глеба и Камилы</h1>
+    <p>Визуальная новелла о случайной встрече в мире Roblox, где даже нелепые ragdoll-кувырки могут стать началом крепкой дружбы.</p>
+    <button class="bigbtn" id="startBtn">▶ Начать историю</button>
+  </div>
+
+  <div id="endScreen">
+    <h2>Конец истории</h2>
+    <p>«Мне повезло», — думал он каждый раз. Они и не заметили, как случайная встреча в ragdoll-режиме превратилась в настоящую дружбу, полную смеха, историй и парных скинов.</p>
+    <button class="bigbtn" id="restartBtn">↺ Начать заново</button>
+  </div>
+
+  <div id="ui">
+    <div id="progressWrap">
+      <span id="progressLabel">1 / 40</span>
+      <div id="progressBar"><div id="progressFill"></div></div>
+    </div>
+    <div id="box">
+      <div id="nameTag" class="narr">Рассказчик</div>
+      <div id="textLine" class="narration"></div>
+      <div id="hint"><span class="dot"></span>нажми, чтобы продолжить</div>
+    </div>
+    <div id="controls">
+      <button id="skipTypeBtn">⏩ Пропустить набор</button>
+      <span id="pageInfo"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // gentle floating bokeh particles purely for atmosphere
+  (function initBokeh(){
+    const bokeh = document.getElementById("bokeh");
+    if(!bokeh) return;
+    const colors = ["#4fa3ff","#ff6fb0","#ffe9a8","#c9c2e0"];
+    const count = window.innerWidth < 480 ? 7 : 12;
+    for(let i=0;i<count;i++){
+      const s = document.createElement("span");
+      const size = 16 + Math.random()*46;
+      s.style.width = size+"px";
+      s.style.height = size+"px";
+      s.style.left = (Math.random()*100)+"%";
+      s.style.color = colors[i % colors.length];
+      s.style.animationDuration = (13 + Math.random()*11)+"s";
+      s.style.animationDelay = (Math.random()*-14)+"s";
+      bokeh.appendChild(s);
+    }
+  })();
+
+  const story = [
+    {who:"narr", text:"Это история о двух игроках Roblox, которые встретились совершенно случайно — в шумном, нелепом режиме Ragdoll, где все падают и кувыркаются."},
+    {who:"narr", text:"Мальчика звали Глеб. Девочку — Камила. В тот вечер они оба просто зашли развеяться."},
+    {who:"narr", text:"Глеб заметил неподалёку незнакомую фигурку, которая забавно валялась на земле после очередного падения.", sprite:"boy"},
+    {who:"narr", text:"Недолго думая, он подбежал ближе — ноги-ragdoll разъезжались в разные стороны, и это выглядело очень смешно.", sprite:"boy", bounce:"boy"},
+    {who:"narr", text:"Камила растерянно посмотрела на него. Она не понимала, кто это и чего он хочет.", sprite:"girl"},
+    {who:"narr", text:"Она попыталась убежать, но с ragdoll-физикой это получилось скорее как забавный кувырок в сторону.", sprite:"girl", bounce:"girl"},
+    {who:"narr", text:"Глеб не сдавался — он снова побежал за ней, повторяя те же смешные падения.", sprite:"boy", bounce:"boy"},
+    {type:"minigame", game:"ragdoll"},
+    {who:"narr", text:"Догнав её, он аккуратно тыкнул в неё, будто говоря: «Эй, привет!»", sprite:"boy", bounce:"boy"},
+    {who:"narr", text:"Камила всё ещё не понимала, что происходит, но уже не боялась — скорее, ей стало любопытно.", sprite:"girl"},
+    {who:"narr", text:"В игре не было чата, поэтому Глеб решил найти способ объясниться иначе.", sprite:"boy"},
+    {who:"narr", text:"Он подбежал к разбросанному на карте реквизиту и поднял табличку, на которой можно было написать текст.", sprite:"boy"},
+    {type:"minigame", game:"sign"},
+    {who:"boy", sign:"Привет! Извини, что гонялся за тобой 😄", text:"Привет! Извини, что гонялся за тобой 😄"},
+    {who:"girl", sign:"Ахах, всё в порядке! Я просто не поняла сразу))", text:"Ахах, всё в порядке! Я просто не поняла сразу))"},
+    {who:"narr", text:"Лёд был сломан. Они начали переписываться табличками, смеясь над тем, как нелепо это всё выглядело со стороны."},
+    {who:"boy", sign:"Может, добавимся в Дискорд? Так проще общаться)", text:"Может, добавимся в Дискорд? Так проще общаться)"},
+    {who:"girl", sign:"Давай! Сейчас напишу тег на табличке", text:"Давай! Сейчас напишу тег на табличке"},
+    {who:"narr", text:"Они обменялись никнеймами через игровые таблички и добавили друг друга в Discord."},
+    {who:"narr", text:"Пока заявка в друзья висела в ожидании, они, смеясь, решили устроить забег по мини-полосе препятствий."},
+    {type:"minigame", game:"maze"},
+    {who:"narr", text:"Через пару минут пришёл первый запрос в друзья — и оба почувствовали лёгкое волнение."},
+    {who:"boy", text:"Привет! Это снова я, только теперь уже не из ragdoll-мира 😅"},
+    {who:"girl", text:"Ахаха, привет! Прикольно, что мы всё-таки нашли способ пообщаться нормально"},
+    {who:"narr", text:"Разговор завязался легко и непринуждённо, будто они были знакомы уже очень давно."},
+    {who:"narr", text:"Наткнувшись на карту с игрой на память, они решили попробовать пройти её вместе — просто ради веселья."},
+    {type:"minigame", game:"memory"},
+    {who:"narr", text:"Через какое-то время Камила предложила вместе зайти в каталог скинов Roblox."},
+    {who:"narr", text:"Она листала страницы каталога и в итоге выбрала новый образ, который ей очень понравился.", sprite:"girl"},
+    {who:"girl", text:"Смотри, вот этот скин! Мне кажется, он мне идёт)"},
+    {type:"minigame", game:"catalog"},
+    {who:"narr", text:"Глеб посмотрел на её выбор — и, сам того не ожидая, тоже потянулся к похожему стилю.", sprite:"boy"},
+    {who:"narr", text:"Оба одновременно закончили примерку своих новых образов и одновременно замерли."},
+    {who:"girl", text:"Стоп... а у нас же почти одинаковые скины?!"},
+    {who:"boy", text:"Ничего себе! Вот это совпадение, я аж не поверил своим глазам"},
+    {who:"narr", text:"Они рассмеялись, разглядывая парные образы — стиль действительно оказался очень похож.", sprite:"both", bounce:"both"},
+    {who:"narr", text:"Камила на секунду замерла в лёгком шоке — слишком уж совпадение казалось невероятным.", sprite:"girl"},
+    {who:"narr", text:"Но шок быстро сменился искренней радостью — и оба ещё долго обсуждали это забавное совпадение."},
+    {who:"narr", text:"Воодушевлённые, они решили пойти играть вместе в одну из игр Roblox — весёлый симулятор «Шаверма»."},
+    {type:"minigame", game:"shawarma"},
+    {who:"narr", text:"Они бегали по кухне, собирали ингредиенты, путали заказы и хохотали над каждой своей ошибкой.", bounce:"both"},
+    {who:"boy", text:"Так, подожди, я перепутал соус и уронил всю шаурму на пол!"},
+    {who:"girl", text:"Ахахаха, классика! У меня то же самое было пять минут назад"},
+    {who:"narr", text:"Время в такие моменты будто летело незаметно — обоим было легко и весело друг с другом."},
+    {who:"narr", text:"Раззадорившись, они решили устроить шуточное соревнование — кто быстрее среагирует на вспышку."},
+    {type:"minigame", game:"reaction"},
+    {who:"narr", text:"Постепенно Камила стала чаще делиться своими историями — забавными случаями из жизни, мелочами дня."},
+    {who:"narr", text:"Глеб слушал внимательно, часто улыбался и радовался каждому её рассказу.", sprite:"boy"},
+    {who:"narr", text:"Со временем он стал называть её ласковыми, милыми прозвищами — просто потому, что ему так хотелось."},
+    {who:"narr", text:"Камила в ответ делала то же самое, придумывая для него забавные милые прозвища."},
+    {who:"narr", text:"Они даже сделали ещё несколько парных скинов вместе — это стало их маленькой доброй традицией."},
+    {who:"narr", text:"Историю про то, как они бегали друг за другом в ragdoll-режиме, они обещали не забывать никогда."},
+    {who:"narr", text:"Как-то раз Камила предложила пройти шуточный тест на совместимость — просто ради смеха."},
+    {type:"minigame", game:"quiz"},
+    {who:"narr", text:"Про себя Глеб часто думал, что Камила — просто прекрасный человек, с которым легко и тепло.", sprite:"boy"},
+    {who:"narr", text:"Однажды он решился показать ей свою собственную игру, над которой давно работал."},
+    {who:"girl", text:"Ого, а это правда классно! Мне очень нравится, что ты это сделал сам"},
+    {who:"narr", text:"Ему было приятно делиться тем, что он создаёт — и он искренне верил, что ей нравится это слушать."},
+    {who:"narr", text:"В одной из карт на них вдруг посыпался настоящий дождь из сердечек — и оба, смеясь, бросились их ловить."},
+    {type:"minigame", game:"hearts"},
+    {who:"narr", text:"Постепенно они стали проводить всё больше времени в голосовых звонках: играли, смеялись, болтали обо всём на свете."},
+    {who:"narr", text:"Однажды под любимую песню оба в шутку начали отбивать ритм прямо в микрофон, смеясь, что получается вразнобой."},
+    {type:"minigame", game:"rhythm"},
+    {type:"minigame", game:"constellation"},
+    {who:"narr", text:"«Мне повезло», — думал Глеб каждый раз, слушая её смех в наушниках."},
+    {who:"narr", text:"Так, шаг за шагом, случайная встреча в нелепом ragdoll-режиме превратилась в тёплую и искреннюю дружбу — ту, что запоминается надолго."}
+  ];
+
+  const nameOf = {boy:"Глеб", girl:"Камила", narr:"Рассказчик"};
+
+  let idx = 0;
+  let typing = false;
+  let charTimer = null;
+  let audioCtx = null;
+  let muted = false;
+  let volume = 0.5;       // 0..1, user-controlled master volume
+  let lastVolume = 0.5;   // remembers volume level to restore after unmuting
+  const MAX_MUSIC_GAIN = 0.32; // lowered ceiling so the whole soundtrack sits quieter by default
+  let musicGain = null;
+  let delayNode = null;
+  let feedbackGain = null;
+  let chordTimer = null;
+  let sparkleTimer = null;
+  let musicPlaying = false;
+  let chordIdx = 0;
+
+  // cute pentatonic scale (C D E G A C) — used only for the typing blips and sparkles
+  const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+
+  // slow, dreamy chord progression for the ambient pad (Cmaj9 → Fmaj7 → G6 → Am7 → Fmaj7 → Cmaj9)
+  const padChords = [
+    [130.81, 164.81, 196.00, 246.94, 293.66],   // Cmaj9 (low)
+    [174.61, 220.00, 261.63, 329.63],           // Fmaj7
+    [196.00, 246.94, 293.66, 329.63],           // G6
+    [110.00, 130.81, 164.81, 196.00],           // Am7
+    [174.61, 220.00, 261.63, 329.63],           // Fmaj7
+    [130.81, 164.81, 196.00, 246.94, 293.66]    // Cmaj9 (low)
+  ];
+  const CHORD_DURATION = 5200; // ms per chord — slow, unhurried, atmospheric
+
+  const titleScreen = document.getElementById("titleScreen");
+  const endScreen = document.getElementById("endScreen");
+  const startBtn = document.getElementById("startBtn");
+  const restartBtn = document.getElementById("restartBtn");
+  const box = document.getElementById("box");
+  const nameTag = document.getElementById("nameTag");
+  const textLine = document.getElementById("textLine");
+  const hint = document.getElementById("hint");
+  const progressLabel = document.getElementById("progressLabel");
+  const progressFill = document.getElementById("progressFill");
+  const pageInfo = document.getElementById("pageInfo");
+  const skipTypeBtn = document.getElementById("skipTypeBtn");
+  const spriteBoy = document.getElementById("spriteBoy");
+  const spriteGirl = document.getElementById("spriteGirl");
+  const signOverlay = document.getElementById("signOverlay");
+  const muteBtn = document.getElementById("muteBtn");
+  const volumeSlider = document.getElementById("volumeSlider");
+  const minigameOverlay = document.getElementById("minigameOverlay");
+  const mgTitleEl = document.getElementById("mgTitle");
+  const mgArea = document.getElementById("mgArea");
+  const mgSkipBtn = document.getElementById("mgSkip");
+  const mgContinueBtn = document.getElementById("mgContinue");
+  let minigameActive = false;
+
+  function ensureAudio(){
+    if(!audioCtx){
+      try{
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        musicGain = audioCtx.createGain();
+        musicGain.gain.value = muted ? 0 : MAX_MUSIC_GAIN*volume;
+
+        // soft echo/delay so the pad feels spacious and atmospheric rather than dry & 8-bit
+        delayNode = audioCtx.createDelay(2.0);
+        delayNode.delayTime.value = 0.55;
+        feedbackGain = audioCtx.createGain();
+        feedbackGain.gain.value = 0.24;
+        delayNode.connect(feedbackGain);
+        feedbackGain.connect(delayNode);
+
+        musicGain.connect(audioCtx.destination);      // dry
+        musicGain.connect(delayNode);
+        delayNode.connect(audioCtx.destination);       // wet echo tail
+      }catch(e){ audioCtx = null; }
+    }
+    if(audioCtx && audioCtx.state === "suspended"){
+      audioCtx.resume();
+    }
+  }
+
+  // cute little "Animal Crossing"-style blip — a soft, randomly-pitched pluck
+  // from the same pentatonic scale as the background song
+  function typeBlip(){
+    if(muted || !audioCtx) return;
+    try{
+      const t = audioCtx.currentTime;
+      const freq = scale[Math.floor(Math.random()*scale.length)] * (Math.random()<0.5?1:2);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.085, t+0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t+0.09);
+      osc.connect(gain).connect(musicGain);
+      osc.start(t);
+      osc.stop(t+0.1);
+    }catch(e){}
+  }
+
+  // slow, breathing pad chord — several soft detuned sine layers with a long
+  // fade-in/fade-out, this is what gives the loop its atmospheric, ambient feel
+  function playPadChord(freqs){
+    const t = audioCtx.currentTime;
+    const dur = CHORD_DURATION/1000 + 1.4;
+    freqs.forEach((f, i)=>{
+      [1, 1.003, 0.997].forEach(detune=>{ // gentle unison detune = warmth
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = i===0 ? "sine" : "triangle";
+        osc.frequency.value = f*detune;
+        const peak = 0.016 - i*0.002;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(Math.max(peak,0.01), t+dur*0.4);
+        gain.gain.linearRampToValueAtTime(0.0001, t+dur);
+        osc.connect(gain).connect(musicGain);
+        osc.start(t);
+        osc.stop(t+dur+0.2);
+      });
+    });
+  }
+
+  // occasional soft high "twinkle" — sparse, quiet, randomly timed
+  function playSparkle(){
+    if(!musicPlaying || !audioCtx) return;
+    const t = audioCtx.currentTime;
+    const freq = scale[Math.floor(Math.random()*scale.length)] * 2;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.024, t+0.15);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t+1.8);
+    osc.connect(gain).connect(musicGain);
+    osc.start(t);
+    osc.stop(t+1.9);
+    sparkleTimer = setTimeout(playSparkle, 1800 + Math.random()*2600);
+  }
+
+  function stepChord(){
+    if(!musicPlaying || !audioCtx) return;
+    playPadChord(padChords[chordIdx % padChords.length]);
+    chordIdx++;
+    chordTimer = setTimeout(stepChord, CHORD_DURATION);
+  }
+
+  function startMusic(){
+    if(musicPlaying || !audioCtx) return;
+    musicPlaying = true;
+    chordIdx = 0;
+    stepChord();
+    sparkleTimer = setTimeout(playSparkle, 2200);
+  }
+
+  function stopMusic(){
+    musicPlaying = false;
+    clearTimeout(chordTimer);
+    clearTimeout(sparkleTimer);
+  }
+
+  function setSprites(step){
+    spriteBoy.classList.remove("active","bounce");
+    spriteGirl.classList.remove("active","bounce");
+    if(step.who==="boy"||step.sprite==="boy"||step.sprite==="both"){
+      spriteBoy.classList.add("active");
+    }
+    if(step.who==="girl"||step.sprite==="girl"||step.sprite==="both"){
+      spriteGirl.classList.add("active");
+    }
+    if(step.bounce==="boy"||step.bounce==="both") spriteBoy.classList.add("bounce");
+    if(step.bounce==="girl"||step.bounce==="both") spriteGirl.classList.add("bounce");
+  }
+
+  function showSign(text){
+    signOverlay.textContent = text;
+    signOverlay.classList.add("show");
+    setTimeout(()=>{ signOverlay.classList.remove("show"); }, 1900);
+  }
+
+  // ===== Mini-games =====
+  const MG_TITLES = {
+    ragdoll:"Мини-игра: догонялки в Ragdoll",
+    sign:"Мини-игра: сообщение на табличке",
+    catalog:"Мини-игра: подбери парный образ",
+    shawarma:"Мини-игра: Шаверма-затейка",
+    constellation:"Мини-игра: созвездие дружбы",
+    maze:"Мини-игра: полоса препятствий",
+    memory:"Мини-игра: найди пару",
+    reaction:"Мини-игра: скорость реакции",
+    quiz:"Мини-игра: тест на совпадение",
+    hearts:"Мини-игра: дождь из сердечек",
+    rhythm:"Мини-игра: в такт музыке"
+  };
+
+  function launchMinigame(gameId, onDone){
+    ensureAudio();
+    minigameActive = true;
+    document.getElementById("ui").style.display = "none";
+    minigameOverlay.classList.add("show");
+    mgTitleEl.textContent = MG_TITLES[gameId] || "Мини-игра";
+    mgArea.innerHTML = "";
+    mgContinueBtn.style.display = "none";
+
+    function endMinigame(){
+      if(!minigameActive) return;
+      minigameActive = false;
+      minigameOverlay.classList.remove("show");
+      document.getElementById("ui").style.display = "block";
+      mgArea.innerHTML = "";
+      onDone();
+    }
+
+    mgSkipBtn.onclick = endMinigame;
+
+    if(gameId === "ragdoll") mgRagdollChase(mgArea, endMinigame);
+    else if(gameId === "sign") mgSignMessage(mgArea, endMinigame);
+    else if(gameId === "catalog") mgCatalogMatch(mgArea, endMinigame);
+    else if(gameId === "shawarma") mgShawarma(mgArea, endMinigame);
+    else if(gameId === "constellation") mgConstellation(mgArea, endMinigame);
+    else if(gameId === "maze") mgMazeRun(mgArea, endMinigame);
+    else if(gameId === "memory") mgMemoryMatch(mgArea, endMinigame);
+    else if(gameId === "reaction") mgReactionTest(mgArea, endMinigame);
+    else if(gameId === "quiz") mgCompatQuiz(mgArea, endMinigame);
+    else if(gameId === "hearts") mgHeartCatch(mgArea, endMinigame);
+    else if(gameId === "rhythm") mgRhythmTap(mgArea, endMinigame);
+    else endMinigame();
+  }
+
+  function finishGame(container, message, onDone){
+    const done = document.createElement("div");
+    done.className = "mg-done";
+    done.innerHTML = '<div class="mg-done-msg">'+message+'</div>';
+    container.appendChild(done);
+    mgContinueBtn.style.display = "inline-block";
+    mgContinueBtn.onclick = onDone;
+  }
+
+  // shared intro panel — lets the player read the goal and start whenever
+  // they're ready, instead of throwing them straight into the action
+  function showGameIntro(container, icon, title, desc, onStart){
+    const intro = document.createElement("div");
+    intro.className = "mg-intro";
+    intro.innerHTML =
+      '<div class="mg-intro-icon">'+icon+'</div>'+
+      '<div class="mg-intro-title">'+title+'</div>'+
+      '<div class="mg-intro-desc">'+desc+'</div>'+
+      '<button class="mg-intro-start">Начать ▶</button>';
+    container.appendChild(intro);
+    intro.querySelector(".mg-intro-start").addEventListener("click", ()=>{
+      intro.remove();
+      onStart();
+    });
+  }
+
+  // a soft standalone chime for positive feedback inside mini-games
+  function playChime(){
+    if(muted || !audioCtx) return;
+    try{
+      const t = audioCtx.currentTime;
+      const freq = scale[Math.floor(Math.random()*scale.length)]*2;
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.12, t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+0.5);
+      osc.connect(g).connect(musicGain);
+      osc.start(t); osc.stop(t+0.55);
+    }catch(e){}
+  }
+
+  // --- Game 1: unhurried catch-tag under a starry night sky ---
+  function mgRagdollChase(container, onDone){
+    container.innerHTML = '<div class="mg-bg-stars"></div>';
+    showGameIntro(container, "🌙", "Догонялки в Ragdoll",
+      "Глеб пытается догнать новую знакомую по карте. Лови её, когда она появится — спешить некуда, она подождёт.",
+      startGame);
+
+    function startGame(){
+      const need = 5;
+      let caught = 0;
+      const hud = document.createElement("div");
+      hud.className = "mg-counter";
+      hud.innerHTML = 'Поймано: <span id="mgCatchNum">0</span> / '+need;
+      container.appendChild(hud);
+      const countEl = hud.querySelector("#mgCatchNum");
+
+      const target = document.createElement("div");
+      target.className = "mg-target";
+      target.textContent = "🏃";
+      target.style.visibility = "hidden";
+      container.appendChild(target);
+
+      function moveTarget(delay){
+        target.style.visibility = "hidden";
+        setTimeout(()=>{
+          const w = container.clientWidth, h = container.clientHeight;
+          const x = Math.random()*(w-70)+15;
+          const y = Math.random()*(h-110)+50;
+          target.style.left = x+"px";
+          target.style.top = y+"px";
+          target.style.visibility = "visible";
+        }, delay);
+      }
+      target.addEventListener("click", ()=>{
+        caught++;
+        countEl.textContent = caught;
+        typeBlip();
+        target.classList.add("mg-pop");
+        setTimeout(()=>target.classList.remove("mg-pop"), 150);
+        if(caught >= need){
+          target.style.visibility = "hidden";
+          finishGame(container, "Поймал(а)! Знакомство состоялось 🎉", onDone);
+        } else {
+          moveTarget(650); // a calm pause before she reappears
+        }
+      });
+      moveTarget(500);
+    }
+  }
+
+  // --- Game 2: spell out the first message on the sign, letter by letter ---
+  function mgSignMessage(container, onDone){
+    container.innerHTML = '<div class="mg-bg-stars"></div>';
+    showGameIntro(container, "✍️", "Сообщение на табличке",
+      "В игре нет чата — помоги Глебу написать первое слово. Нажимай на буквы по порядку, торопиться незачем.",
+      startGame);
+
+    function startGame(){
+      const word = ["П","Р","И","В","Е","Т"];
+      const decoys = ["Ж","Ю","Щ"];
+      let tiles = word.concat(decoys)
+        .map(v=>({v, k:Math.random()}))
+        .sort((a,b)=>a.k-b.k)
+        .map(o=>o.v);
+      let progress = 0;
+
+      const progressEl = document.createElement("div");
+      progressEl.className = "mg-counter";
+      container.appendChild(progressEl);
+
+      const board = document.createElement("div");
+      board.className = "mg-sign-board";
+      board.textContent = "🪧";
+      container.appendChild(board);
+
+      const grid = document.createElement("div");
+      grid.className = "mg-letters-grid";
+      container.appendChild(grid);
+
+      function updateProgress(){
+        progressEl.textContent = "Слово: " + word.map((l,i)=> i<progress ? l : "_").join(" ");
+      }
+      updateProgress();
+
+      tiles.forEach(letter=>{
+        const btn = document.createElement("button");
+        btn.className = "mg-letter-tile";
+        btn.textContent = letter;
+        btn.style.animationDelay = (Math.random()*2).toFixed(2)+"s";
+        btn.addEventListener("click", ()=>{
+          if(btn.disabled) return;
+          if(letter === word[progress]){
+            progress++;
+            typeBlip();
+            btn.disabled = true;
+            btn.classList.add("mg-letter-used");
+            updateProgress();
+            if(progress >= word.length){
+              setTimeout(()=> finishGame(container, "Готово! Сообщение отправлено ✉️", onDone), 400);
+            }
+          } else {
+            btn.classList.add("mg-swatch-wrong");
+            setTimeout(()=>btn.classList.remove("mg-swatch-wrong"), 350);
+          }
+        });
+        grid.appendChild(btn);
+      });
+    }
+  }
+
+  // --- Game 3: pick the outfit that matches Kamila's, no clock involved ---
+  function mgCatalogMatch(container, onDone){
+    container.innerHTML = '<div class="mg-catalog-bg"></div><div class="mg-catalog-sparkles"></div>';
+    showGameIntro(container, "🧥", "Парный образ",
+      "Камила уже выбрала стиль. Полистай карточки и найди наряд для Глеба, который подойдёт им в пару — не спеша.",
+      startGame);
+
+    function startGame(){
+      const options = [
+        {label:"Синий кэжуал", chip:"#4fa3ff", match:false},
+        {label:"Коричнево-розовый стиль", chip:"#c98a5e", match:true},
+        {label:"Зелёный спортивный", chip:"#5ecb7a", match:false},
+        {label:"Чёрная классика", chip:"#2b2b39", match:false}
+      ];
+      options.sort(()=>Math.random()-0.5);
+
+      const ref = document.createElement("div");
+      ref.className = "mg-catalog-ref";
+      ref.innerHTML = 'Образ Камилы: <b>Коричнево-розовый стиль</b> <span class="mg-chip" style="background:#c98a5e"></span>';
+      container.appendChild(ref);
+
+      const grid = document.createElement("div");
+      grid.className = "mg-catalog-grid";
+      container.appendChild(grid);
+
+      const hint = document.createElement("div");
+      hint.className = "mg-catalog-hint";
+      hint.textContent = "Выбери образ для Глеба, который подойдёт в пару";
+      container.appendChild(hint);
+
+      options.forEach(opt=>{
+        const btn = document.createElement("button");
+        btn.className = "mg-swatch";
+        btn.innerHTML = '<span class="mg-chip" style="background:'+opt.chip+'"></span>'+opt.label;
+        btn.addEventListener("click", ()=>{
+          if(opt.match){
+            playChime();
+            setTimeout(playChime, 120);
+            btn.classList.add("mg-swatch-correct");
+            finishGame(container, "Идеальная пара! ✨", onDone);
+          } else {
+            btn.classList.add("mg-swatch-wrong");
+            setTimeout(()=>btn.classList.remove("mg-swatch-wrong"), 350);
+          }
+        });
+        grid.appendChild(btn);
+      });
+    }
+  }
+
+  // --- Game 4: catch falling shawarma ingredients, unhurried pace ---
+  function mgShawarma(container, onDone){
+    container.innerHTML = '<div class="mg-shawarma-bg"></div><div class="mg-steam"></div>';
+    showGameIntro(container, "🌯", "Шаверма-затейка",
+      "Двигай ролл пальцем или мышкой и лови ингредиенты, которые падают сверху. Времени много — падают они неспешно.",
+      startGame);
+
+    function startGame(){
+      const DURATION = 18;
+      const scoreWrap = document.createElement("div");
+      scoreWrap.className = "mg-sh-score";
+      scoreWrap.innerHTML = "Поймано: <span id='mgShScore'>0</span>";
+      container.appendChild(scoreWrap);
+
+      const timeWrap = document.createElement("div");
+      timeWrap.className = "mg-sh-timer";
+      timeWrap.innerHTML = "⏱ <span id='mgShTime'>"+DURATION+"</span>";
+      container.appendChild(timeWrap);
+
+      const catcher = document.createElement("div");
+      catcher.className = "mg-sh-catcher";
+      catcher.textContent = "🌯";
+      container.appendChild(catcher);
+
+      const scoreEl = scoreWrap.querySelector("#mgShScore");
+      const timeEl = timeWrap.querySelector("#mgShTime");
+      let score = 0, timeLeft = DURATION, running = true;
+      let catcherX = container.clientWidth/2;
+      catcher.style.left = catcherX+"px";
+
+      function moveCatcherTo(clientX){
+        const rect = container.getBoundingClientRect();
+        catcherX = Math.max(28, Math.min(rect.width-28, clientX-rect.left));
+        catcher.style.left = catcherX+"px";
+      }
+      function onMove(e){
+        if(!running) return;
+        if(e.touches && e.touches[0]) moveCatcherTo(e.touches[0].clientX);
+        else if(e.clientX !== undefined) moveCatcherTo(e.clientX);
+      }
+      container.addEventListener("pointermove", onMove);
+      container.addEventListener("touchmove", onMove, {passive:true});
+
+      const ingredients = ["🥙","🧅","🍅","🥬","🧀"];
+      let drops = [];
+      let spawnTimer = 0.6;
+      function spawnDrop(){
+        const el = document.createElement("div");
+        el.className = "mg-sh-drop";
+        el.textContent = ingredients[Math.floor(Math.random()*ingredients.length)];
+        const x = Math.random()*(container.clientWidth-32)+12;
+        el.style.left = x+"px";
+        el.style.top = "-28px";
+        container.appendChild(el);
+        drops.push({el, x, y:-28, speed:44+Math.random()*34}); // slow, gentle fall
+      }
+
+      let lastTs = null;
+      function loop(ts){
+        if(!running) return;
+        if(lastTs === null) lastTs = ts;
+        const dt = Math.min((ts-lastTs)/1000, 0.05);
+        lastTs = ts;
+        spawnTimer -= dt;
+        if(spawnTimer <= 0){ spawnDrop(); spawnTimer = 0.95+Math.random()*0.55; }
+        const catchY = container.clientHeight-42;
+        drops = drops.filter(d=>{
+          d.y += d.speed*dt;
+          d.el.style.top = d.y+"px";
+          if(d.y > catchY-10 && d.y < catchY+20 && Math.abs(d.x-catcherX) < 38){
+            score++; scoreEl.textContent = score;
+            typeBlip();
+            d.el.remove();
+            return false;
+          }
+          if(d.y > container.clientHeight+20){ d.el.remove(); return false; }
+          return true;
+        });
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+
+      const countdown = setInterval(()=>{
+        timeLeft--;
+        timeEl.textContent = Math.max(timeLeft,0);
+        if(timeLeft <= 0){
+          clearInterval(countdown);
+          running = false;
+          drops.forEach(d=>d.el.remove());
+          finishGame(container, "Поймано "+score+"! Вкусно повеселились 🌯", onDone);
+        }
+      }, 1000);
+    }
+  }
+
+  // --- Game 5: connect the stars in order to draw their little constellation ---
+  function mgConstellation(container, onDone){
+    container.innerHTML = '<div class="mg-bg-stars mg-bg-stars-dense"></div>';
+    showGameIntro(container, "✨", "Созвездие дружбы",
+      "Соедини звёзды по порядку — от первой до последней, — чтобы собрать созвездие их дружбы. Никакого таймера нет.",
+      startGame);
+
+    function startGame(){
+      const baseW = 440, baseH = 300;
+      const points = [
+        {x:60,y:210},{x:130,y:110},{x:220,y:70},{x:310,y:110},{x:380,y:210},{x:220,y:250}
+      ];
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", "0 0 "+baseW+" "+baseH);
+      svg.setAttribute("class", "mg-const-svg");
+      const defs = document.createElementNS(svgNS, "defs");
+      defs.innerHTML = '<linearGradient id="mgConstGrad" x1="0" y1="0" x2="1" y2="1">' +
+        '<stop offset="0%" stop-color="#4fa3ff"/><stop offset="100%" stop-color="#ff6fb0"/></linearGradient>';
+      svg.appendChild(defs);
+      container.appendChild(svg);
+
+      const linesGroup = document.createElementNS(svgNS, "g");
+      svg.appendChild(linesGroup);
+
+      let next = 0;
+      points.forEach((p, i)=>{
+        const label = document.createElementNS(svgNS, "text");
+        label.setAttribute("x", p.x);
+        label.setAttribute("y", p.y-20);
+        label.setAttribute("class", "mg-const-label");
+        label.textContent = i+1;
+        svg.appendChild(label);
+
+        const star = document.createElementNS(svgNS, "circle");
+        star.setAttribute("cx", p.x);
+        star.setAttribute("cy", p.y);
+        star.setAttribute("r", 15);
+        star.setAttribute("class", "mg-const-star");
+        star.addEventListener("click", ()=>{
+          if(i !== next){
+            star.classList.add("mg-const-wrong");
+            setTimeout(()=>star.classList.remove("mg-const-wrong"), 300);
+            return;
+          }
+          star.classList.add("mg-const-done");
+          label.classList.add("mg-const-label-done");
+          if(next>0){
+            const prev = points[next-1];
+            const line = document.createElementNS(svgNS, "line");
+            line.setAttribute("x1", prev.x); line.setAttribute("y1", prev.y);
+            line.setAttribute("x2", p.x); line.setAttribute("y2", p.y);
+            line.setAttribute("class", "mg-const-line");
+            linesGroup.appendChild(line);
+          }
+          playChime();
+          next++;
+          if(next >= points.length){
+            setTimeout(()=> finishGame(container, "Их маленькое созвездие готово 💫", onDone), 500);
+          }
+        });
+        svg.appendChild(star);
+      });
+    }
+  }
+
+  // --- Game 6: gentle obstacle course — guide the avatar to the flag ---
+  function mgMazeRun(container, onDone){
+    container.innerHTML = '<div class="mg-maze-bg"></div>';
+    showGameIntro(container, "🏁", "Полоса препятствий",
+      "Веди фигурку пальцем или мышкой до флажка. Другие фигурки просто мешаются под ногами — столкновение не страшно.",
+      startGame);
+
+    function startGame(){
+      const hint = document.createElement("div");
+      hint.className = "mg-maze-hint";
+      hint.textContent = "Доведи фигурку до флажка 🏁";
+      container.appendChild(hint);
+
+      const w = container.clientWidth, h = container.clientHeight;
+      const flag = document.createElement("div");
+      flag.className = "mg-maze-flag";
+      flag.textContent = "🏁";
+      const flagX = w-46, flagY = h/2;
+      flag.style.left = flagX+"px"; flag.style.top = flagY+"px";
+      flag.style.transform = "translate(-50%,-50%)";
+      container.appendChild(flag);
+
+      const avatar = document.createElement("div");
+      avatar.className = "mg-maze-avatar";
+      avatar.textContent = "🙂";
+      let ax = 40, ay = h/2;
+      avatar.style.left = ax+"px"; avatar.style.top = ay+"px";
+      container.appendChild(avatar);
+
+      const obstacleEmojis = ["🌀","⚡","🐌"];
+      const obstacles = obstacleEmojis.map((em, i)=>{
+        const el = document.createElement("div");
+        el.className = "mg-maze-obstacle";
+        el.textContent = em;
+        container.appendChild(el);
+        return {
+          el,
+          x: w*0.3 + i*(w*0.18),
+          y: 40 + Math.random()*(h-80),
+          vx: (Math.random()<0.5?-1:1)*(18+Math.random()*16),
+          vy: (Math.random()<0.5?-1:1)*(14+Math.random()*14)
+        };
+      });
+
+      let running = true;
+      function moveAvatarTo(clientX, clientY){
+        if(!running) return;
+        const rect = container.getBoundingClientRect();
+        ax = Math.max(20, Math.min(w-20, clientX-rect.left));
+        ay = Math.max(20, Math.min(h-20, clientY-rect.top));
+        avatar.style.left = ax+"px";
+        avatar.style.top = ay+"px";
+        if(Math.hypot(ax-flagX, ay-flagY) < 34){
+          running = false;
+          finishGame(container, "Дошли вместе, ни разу серьёзно не поругавшись с лагами 🏁", onDone);
+        }
+      }
+      function onPointer(e){
+        if(e.touches && e.touches[0]) moveAvatarTo(e.touches[0].clientX, e.touches[0].clientY);
+        else if(e.clientX !== undefined) moveAvatarTo(e.clientX, e.clientY);
+      }
+      container.addEventListener("pointermove", onPointer);
+      container.addEventListener("touchmove", onPointer, {passive:true});
+      container.addEventListener("pointerdown", onPointer);
+
+      let lastTs = null;
+      function loop(ts){
+        if(!running) return;
+        if(lastTs===null) lastTs = ts;
+        const dt = Math.min((ts-lastTs)/1000, 0.05);
+        lastTs = ts;
+        obstacles.forEach(o=>{
+          o.x += o.vx*dt; o.y += o.vy*dt;
+          if(o.x < 24 || o.x > w-24) o.vx *= -1;
+          if(o.y < 24 || o.y > h-24) o.vy *= -1;
+          o.el.style.left = o.x+"px";
+          o.el.style.top = o.y+"px";
+          if(Math.hypot(o.x-ax, o.y-ay) < 26){
+            avatar.classList.add("mg-maze-bump");
+            setTimeout(()=>avatar.classList.remove("mg-maze-bump"), 180);
+          }
+        });
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    }
+  }
+
+  // --- Game 7: classic memory match with their favourite little icons ---
+  function mgMemoryMatch(container, onDone){
+    container.innerHTML = '<div class="mg-mem-bg"></div>';
+    showGameIntro(container, "🧠", "Найди пару",
+      "Переверни карточки и найди все пары — без таймера, в своём темпе.",
+      startGame);
+
+    function startGame(){
+      const icons = ["🎮","🍕","🎵","🌟","🎧","🍿"];
+      let deck = icons.concat(icons)
+        .map(v=>({v, k:Math.random()}))
+        .sort((a,b)=>a.k-b.k)
+        .map(o=>o.v);
+
+      const grid = document.createElement("div");
+      grid.className = "mg-mem-grid";
+      container.appendChild(grid);
+
+      let first = null, second = null, lock = false, matched = 0;
+
+      deck.forEach((icon)=>{
+        const card = document.createElement("div");
+        card.className = "mg-mem-card";
+        card.textContent = "❔";
+        card.dataset.icon = icon;
+        card.addEventListener("click", ()=>{
+          if(lock || card.classList.contains("mg-mem-flipped") || card.classList.contains("mg-mem-matched")) return;
+          card.classList.add("mg-mem-flipped");
+          card.textContent = icon;
+          typeBlip();
+          if(!first){ first = card; return; }
+          second = card;
+          lock = true;
+          if(first.dataset.icon === second.dataset.icon){
+            first.classList.add("mg-mem-matched");
+            second.classList.add("mg-mem-matched");
+            matched++;
+            playChime();
+            first = null; second = null; lock = false;
+            if(matched >= icons.length){
+              setTimeout(()=> finishGame(container, "Все пары найдены — отличная память у обоих! 🧠", onDone), 400);
+            }
+          } else {
+            setTimeout(()=>{
+              first.classList.remove("mg-mem-flipped");
+              second.classList.remove("mg-mem-flipped");
+              first.textContent = "❔";
+              second.textContent = "❔";
+              first = null; second = null; lock = false;
+            }, 650);
+          }
+        });
+        grid.appendChild(card);
+      });
+    }
+  }
+
+  // --- Game 8: light-hearted reaction speed test, no punishment for missing ---
+  function mgReactionTest(container, onDone){
+    container.innerHTML = '<div class="mg-reaction-bg"></div>';
+    showGameIntro(container, "⚡", "Скорость реакции",
+      "Нажимай на звёздочку сразу, как только она появится. Всего 5 раундов, в комфортном темпе.",
+      startGame);
+
+    function startGame(){
+      const need = 5;
+      let round = 0;
+      const hud = document.createElement("div");
+      hud.className = "mg-counter";
+      hud.innerHTML = "Раунд: <span id='mgReactNum'>0</span> / "+need;
+      container.appendChild(hud);
+      const countEl = hud.querySelector("#mgReactNum");
+
+      const target = document.createElement("div");
+      target.className = "mg-target";
+      target.textContent = "⭐";
+      target.style.visibility = "hidden";
+      container.appendChild(target);
+
+      function nextRound(){
+        target.style.visibility = "hidden";
+        const delay = 500 + Math.random()*1200;
+        setTimeout(()=>{
+          const w = container.clientWidth, h = container.clientHeight;
+          const x = Math.random()*(w-70)+15;
+          const y = Math.random()*(h-110)+50;
+          target.style.left = x+"px";
+          target.style.top = y+"px";
+          target.style.visibility = "visible";
+        }, delay);
+      }
+      target.addEventListener("click", ()=>{
+        round++;
+        countEl.textContent = round;
+        typeBlip();
+        target.classList.add("mg-pop");
+        setTimeout(()=>target.classList.remove("mg-pop"), 150);
+        if(round >= need){
+          target.style.visibility = "hidden";
+          finishGame(container, "Отличная реакция у вас обоих! ⚡", onDone);
+        } else {
+          nextRound();
+        }
+      });
+      nextRound();
+    }
+  }
+
+  // --- Game 9: playful "how alike are we" quiz — every answer is a good answer ---
+  function mgCompatQuiz(container, onDone){
+    container.innerHTML = '<div class="mg-quiz-bg"></div>';
+    showGameIntro(container, "💬", "Тест на совпадение",
+      "Пройди шуточный тест — просто выбирай то, что ближе. Никаких правильных ответов нет.",
+      startGame);
+
+    const questions = [
+      {q:"Что лучше на вечер?", opts:["Играть вместе онлайн","Смотреть смешные видео","Просто болтать в войсе"]},
+      {q:"Любимый жанр игр?", opts:["Что-то весёлое и нелепое","Соревновательное","Спокойное и атмосферное"]},
+      {q:"Идеальный перекус во время игры?", opts:["Шаверма","Пицца","Чипсы"]}
+    ];
+
+    function startGame(){
+      const wrap = document.createElement("div");
+      wrap.className = "mg-quiz-wrap";
+      container.appendChild(wrap);
+      let qi = 0;
+
+      function renderQ(){
+        wrap.innerHTML = "";
+        const progress = document.createElement("div");
+        progress.className = "mg-quiz-progress";
+        progress.textContent = (qi+1)+" / "+questions.length;
+        wrap.appendChild(progress);
+
+        const qEl = document.createElement("div");
+        qEl.className = "mg-quiz-q";
+        qEl.textContent = questions[qi].q;
+        wrap.appendChild(qEl);
+
+        const optsEl = document.createElement("div");
+        optsEl.className = "mg-quiz-opts";
+        questions[qi].opts.forEach(opt=>{
+          const btn = document.createElement("button");
+          btn.className = "mg-quiz-opt";
+          btn.textContent = opt;
+          btn.addEventListener("click", ()=>{
+            typeBlip();
+            qi++;
+            if(qi >= questions.length){
+              const pct = 90 + Math.floor(Math.random()*10);
+              finishGame(container, "Совпадение вкусов: "+pct+"%! Вы отлично друг другу подходите 💫", onDone);
+            } else {
+              renderQ();
+            }
+          });
+          optsEl.appendChild(btn);
+        });
+        wrap.appendChild(optsEl);
+      }
+      renderQ();
+    }
+  }
+
+  // --- Game 10: catch the falling hearts, unhurried pace (reuses shawarma-style layout) ---
+  function mgHeartCatch(container, onDone){
+    container.innerHTML = '<div class="mg-hearts-bg"></div>';
+    showGameIntro(container, "💞", "Дождь из сердечек",
+      "Двигай ловушку пальцем или мышкой и лови сердечки, которые сыплются сверху. Спешить некуда.",
+      startGame);
+
+    function startGame(){
+      const DURATION = 16;
+      const scoreWrap = document.createElement("div");
+      scoreWrap.className = "mg-sh-score";
+      scoreWrap.innerHTML = "Поймано: <span id='mgHeScore'>0</span>";
+      container.appendChild(scoreWrap);
+
+      const timeWrap = document.createElement("div");
+      timeWrap.className = "mg-sh-timer";
+      timeWrap.innerHTML = "⏱ <span id='mgHeTime'>"+DURATION+"</span>";
+      container.appendChild(timeWrap);
+
+      const catcher = document.createElement("div");
+      catcher.className = "mg-sh-catcher";
+      catcher.textContent = "🧺";
+      container.appendChild(catcher);
+
+      const scoreEl = scoreWrap.querySelector("#mgHeScore");
+      const timeEl = timeWrap.querySelector("#mgHeTime");
+      let score = 0, timeLeft = DURATION, running = true;
+      let catcherX = container.clientWidth/2;
+      catcher.style.left = catcherX+"px";
+
+      function moveCatcherTo(clientX){
+        const rect = container.getBoundingClientRect();
+        catcherX = Math.max(28, Math.min(rect.width-28, clientX-rect.left));
+        catcher.style.left = catcherX+"px";
+      }
+      function onMove(e){
+        if(!running) return;
+        if(e.touches && e.touches[0]) moveCatcherTo(e.touches[0].clientX);
+        else if(e.clientX !== undefined) moveCatcherTo(e.clientX);
+      }
+      container.addEventListener("pointermove", onMove);
+      container.addEventListener("touchmove", onMove, {passive:true});
+
+      const hearts = ["💖","💕","❤️","💗","💓"];
+      let drops = [];
+      let spawnTimer = 0.6;
+      function spawnDrop(){
+        const el = document.createElement("div");
+        el.className = "mg-sh-drop";
+        el.textContent = hearts[Math.floor(Math.random()*hearts.length)];
+        const x = Math.random()*(container.clientWidth-32)+12;
+        el.style.left = x+"px";
+        el.style.top = "-28px";
+        container.appendChild(el);
+        drops.push({el, x, y:-28, speed:42+Math.random()*32});
+      }
+
+      let lastTs = null;
+      function loop(ts){
+        if(!running) return;
+        if(lastTs === null) lastTs = ts;
+        const dt = Math.min((ts-lastTs)/1000, 0.05);
+        lastTs = ts;
+        spawnTimer -= dt;
+        if(spawnTimer <= 0){ spawnDrop(); spawnTimer = 0.9+Math.random()*0.5; }
+        const catchY = container.clientHeight-42;
+        drops = drops.filter(d=>{
+          d.y += d.speed*dt;
+          d.el.style.top = d.y+"px";
+          if(d.y > catchY-10 && d.y < catchY+20 && Math.abs(d.x-catcherX) < 38){
+            score++; scoreEl.textContent = score;
+            typeBlip();
+            d.el.remove();
+            return false;
+          }
+          if(d.y > container.clientHeight+20){ d.el.remove(); return false; }
+          return true;
+        });
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+
+      const countdown = setInterval(()=>{
+        timeLeft--;
+        timeEl.textContent = Math.max(timeLeft,0);
+        if(timeLeft <= 0){
+          clearInterval(countdown);
+          running = false;
+          drops.forEach(d=>d.el.remove());
+          finishGame(container, "Поймано "+score+" сердечек 💞", onDone);
+        }
+      }, 1000);
+    }
+  }
+
+  // --- Game 11: tap the drum along with the beat — every tap counts ---
+  function mgRhythmTap(container, onDone){
+    container.innerHTML = '<div class="mg-rhythm-bg"></div>';
+    showGameIntro(container, "🥁", "В такт музыке",
+      "Стучите по барабану вместе — просто нажимайте, когда захочется поймать ритм. Нужно 8 ударов.",
+      startGame);
+
+    function startGame(){
+      const need = 8;
+      let hits = 0;
+      const wrap = document.createElement("div");
+      wrap.className = "mg-rhythm-wrap";
+      wrap.innerHTML =
+        '<div class="mg-rhythm-counter">Ударов: <span id="mgRhyNum">0</span> / '+need+'</div>' +
+        '<div class="mg-rhythm-drum" id="mgRhyDrum">🥁</div>' +
+        '<div class="mg-rhythm-bar"><div class="mg-rhythm-bar-fill" id="mgRhyFill"></div></div>';
+      container.appendChild(wrap);
+
+      const numEl = wrap.querySelector("#mgRhyNum");
+      const drum = wrap.querySelector("#mgRhyDrum");
+      const fill = wrap.querySelector("#mgRhyFill");
+
+      drum.addEventListener("click", ()=>{
+        hits++;
+        numEl.textContent = hits;
+        fill.style.width = Math.min(100, (hits/need)*100)+"%";
+        typeBlip();
+        drum.classList.add("mg-rhythm-hit");
+        setTimeout(()=>drum.classList.remove("mg-rhythm-hit"), 140);
+        if(hits >= need){
+          setTimeout(()=> finishGame(container, "Какой классный ритм у вас получился! 🥁", onDone), 300);
+        }
+      });
+    }
+  }
+
+  function renderStep(){
+    const step = story[idx];
+    if(step.type === "minigame"){
+      launchMinigame(step.game, ()=>{ idx++; renderStep(); });
+      return;
+    }
+    nameTag.className = step.who === "boy" ? "boy" : step.who === "girl" ? "girl" : "narr";
+    nameTag.textContent = nameOf[step.who];
+    textLine.className = step.who === "narr" ? "narration" : "";
+    textLine.textContent = "";
+    setSprites(step);
+    if(step.sign) showSign(step.sign);
+
+    progressLabel.textContent = (idx+1) + " / " + story.length;
+    progressFill.style.width = ((idx+1)/story.length*100) + "%";
+    pageInfo.textContent = idx===story.length-1 ? "Последняя страница" : "";
+
+    typeText(step.text);
+  }
+
+  function typeText(full){
+    typing = true;
+    hint.style.visibility = "hidden";
+    let i = 0;
+    clearInterval(charTimer);
+    charTimer = setInterval(()=>{
+      if(i >= full.length){
+        clearInterval(charTimer);
+        typing = false;
+        hint.style.visibility = "visible";
+        return;
+      }
+      textLine.textContent += full[i];
+      if(full[i] !== " ") typeBlip();
+      i++;
+    }, 22);
+  }
+
+  function finishTypingInstantly(){
+    clearInterval(charTimer);
+    const step = story[idx];
+    textLine.textContent = step.text;
+    typing = false;
+    hint.style.visibility = "visible";
+  }
+
+  function next(){
+    ensureAudio();
+    if(typing){
+      finishTypingInstantly();
+      return;
+    }
+    if(idx < story.length - 1){
+      idx++;
+      renderStep();
+    } else {
+      showEnd();
+    }
+  }
+
+  function showEnd(){
+    document.getElementById("ui").style.display = "none";
+    endScreen.style.display = "flex";
+  }
+
+  function startStory(){
+    ensureAudio();
+    startMusic();
+    titleScreen.style.display = "none";
+    endScreen.style.display = "none";
+    document.getElementById("ui").style.display = "block";
+    idx = 0;
+    renderStep();
+  }
+
+  box.addEventListener("click", next);
+  document.addEventListener("keydown", (e)=>{
+    if(titleScreen.style.display !== "none") return;
+    if(minigameActive) return;
+    if(e.code === "Space" || e.code === "Enter" || e.code === "ArrowRight"){
+      e.preventDefault();
+      next();
+    }
+  });
+  skipTypeBtn.addEventListener("click", (e)=>{
+    e.stopPropagation();
+    if(typing) finishTypingInstantly();
+  });
+  startBtn.addEventListener("click", startStory);
+  restartBtn.addEventListener("click", startStory);
+  muteBtn.addEventListener("click", ()=>{
+    muted = !muted;
+    if(muted){
+      lastVolume = volume;
+      volume = 0;
+      if(volumeSlider) volumeSlider.value = 0;
+    } else {
+      volume = lastVolume > 0 ? lastVolume : 0.5;
+      if(volumeSlider) volumeSlider.value = Math.round(volume*100);
+    }
+    muteBtn.textContent = muted ? "🔇" : "🔊";
+    if(musicGain && audioCtx){
+      musicGain.gain.setTargetAtTime(muted ? 0 : MAX_MUSIC_GAIN*volume, audioCtx.currentTime, 0.15);
+    }
+  });
+
+  if(volumeSlider){
+    volumeSlider.addEventListener("input", ()=>{
+      ensureAudio();
+      volume = volumeSlider.value/100;
+      muted = volume <= 0;
+      lastVolume = muted ? lastVolume : volume;
+      muteBtn.textContent = muted ? "🔇" : "🔊";
+      if(musicGain && audioCtx){
+        musicGain.gain.setTargetAtTime(muted ? 0 : MAX_MUSIC_GAIN*volume, audioCtx.currentTime, 0.1);
+      }
+    });
+  }
+
+})();
+</script>
+</body>
+</html>
